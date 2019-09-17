@@ -1,0 +1,40 @@
+* we need a feature bit so that we don't enable paxos rpc verbs
+  until we fully upgrade, otherwise there is no way to rollback: we may get
+  dirty paxos table/partial paxos state, which is lost after rollback
+  of a failed upgrade
+* should verify_batch_size be called for lwt batches?
+* trace current values if there is no match
+
+QA:
+
+* schema mismatch test for every paxos stage
+* static columns, https://issues.apache.org/jira/browse/CASSANDRA-10532
+  port the extended test case and fix
+* test the algorithm with a node down at each step
+* testing pending endpoints
+* cassandra has CAS unit teste in the source code; look at them; 
+  in particular, a test case for CASSANDRA-7155 patch
+* test parameter markers, unbound parameter markers in particular
+  using python prepared statement api
+* tests for CQL stats (inserts, updates, deletes)
+
+UNREALTED CLEANUP:
+
+* remove prepared alias from raw hirerarchy
+* rename column_conditions to regular_conditions
+* remove raw namespace and rename all raw statements to have a prefix
+* remove prepared_statement class and move all its stuff to cql_statement
+* remove typedef clustering_key = clustering_key_prefix, always
+  use name clustering_key
+* pre-create an empty clustering key, it's often used
+* ban query_options copy constructor
+* add const to add_update_for_key and apply_updates and entire
+  hierarchy
+* server/transport is dependent on cql3/raw/???
+* implement direct data value comparison api, to avoid
+  extra compose/decompose
+* make operator_type POD and constexpr
+* add operator_type::compare_for_cql just like in cassandra
+* deserialize_value: move to class
+* rename decompose and deserialize to serialize & deserialize or compose and decmpose!
+* ditch collection_size_len

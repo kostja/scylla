@@ -1,0 +1,5 @@
+type: cql
+description: light weight transactions
+mode: 
+    - type: single
+    - type: cluster
