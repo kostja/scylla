@@ -359,7 +359,7 @@ async def run_all_tests(tests_to_run, signaled, options):
                 # Wait for some task to finish
                 done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
                 await reap(done, pending, signaled)
-            pending.add(asyncio.Task(run_test(test, options)))
+            pending.add(asyncio.create_task(run_test(test, options)))
         # Wait & reap ALL tasks but signaled_task
         # Do not use asyncio.ALL_COMPLETED to print a nice progress report
         while len(pending) > 1:
