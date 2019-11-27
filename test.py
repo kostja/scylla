@@ -217,13 +217,13 @@ async def run_test(test, options):
         process = await asyncio.create_subprocess_exec(
             test.path,
             *test.args,
-            stderr = asyncio.subprocess.STDOUT,
-            stdout = asyncio.subprocess.PIPE,
-            env = dict(os.environ,
-                UBSAN_OPTIONS = 'print_stacktrace=1',
-                BOOST_TEST_CATCH_SYSTEM_ERRORS = 'no'),
-            preexec_fn = os.setsid
-        )
+            stderr=asyncio.subprocess.STDOUT,
+            stdout=asyncio.subprocess.PIPE,
+            env=dict(os.environ,
+                UBSAN_OPTIONS='print_stacktrace=1',
+                BOOST_TEST_CATCH_SYSTEM_ERRORS='no'),
+                preexec_fn=os.setsid,
+            )
         stdout, _ = await asyncio.wait_for(process.communicate(), options.timeout)
         success = process.returncode == 0
         if process.returncode != 0:
@@ -357,13 +357,13 @@ async def run_all_tests(tests_to_run, signaled, options):
             # +1 for 'signaled' event
             if len(pending) > options.jobs:
                 # Wait for some task to finish
-                done, pending = await asyncio.wait(pending, return_when = asyncio.FIRST_COMPLETED)
+                done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
                 await reap(done, pending, signaled)
             pending.add(asyncio.Task(run_test(test, options)))
         # Wait & reap ALL tasks but signaled_task
         # Do not use asyncio.ALL_COMPLETED to print a nice progress report
         while len(pending) > 1:
-            done, pending = await asyncio.wait(pending, return_when = asyncio.FIRST_COMPLETED)
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             await reap(done, pending, signaled)
 
     except asyncio.CancelledError:
