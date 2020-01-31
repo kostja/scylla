@@ -18,7 +18,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Scylla.  If not, see <http://www.gnu.org/licenses/>.
  */
-
+#include <gperftools/profiler.h>
 #include "build_id.hh"
 #include "supervisor.hh"
 #include "database.hh"
@@ -417,7 +417,6 @@ int main(int ac, char** av) {
         std::cerr << "Could not make scylla dumpable\n";
         exit(1);
     }
-
   try {
     // early check to avoid triggering
     if (!cpu_sanity()) {
@@ -1133,6 +1132,17 @@ int main(int ac, char** av) {
             });
 
             startlog.info("Scylla version {} initialization completed.", scylla_version());
+            ProfilerStart("1.prof");
+            struct ProfilerState state;
+            ProfilerGetCurrentState(&state);
+            std::cout << "profiler.enabled: " << state.enabled << ", name: " << state.profile_name << std::endl;
+#if 0
+            int    enabled;             /* Is profiling currently enabled? */
+            time_t start_time;          /* If enabled, when was profiling started? */
+            char   profile_name[1024];  /* Name of profile file being written, or '\0' */
+            int    samples_gathered;    /* Number of samples gathered so far (or 0) */
+#endif
+
             stop_signal.wait().get();
             startlog.info("Signal received; shutting down");
 	    // At this point, all objects destructors and all shutdown hooks registered with defer() are executed
@@ -1144,6 +1154,8 @@ int main(int ac, char** av) {
             return 1;
           }
           startlog.info("Scylla version {} shutdown complete.", scylla_version());
+          ProfilerFlush();
+          ProfilerStop();
           // We should be returning 0 here, but the system is not yet prepared for orderly rollback of main() objects
           // and thread_local variables.
           _exit(0);

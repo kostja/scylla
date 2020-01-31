@@ -1023,7 +1023,7 @@ tests_link_rule = 'link' if args.tests_debuginfo else 'link_stripped'
 
 # Strip if debuginfo is disabled, otherwise we end up with partial
 # debug info from the libraries we static link with
-regular_link_rule = 'link' if args.debuginfo else 'link_stripped'
+regular_link_rule = 'link' if args.debuginfo else 'link'
 
 if args.so:
     args.pie = '-shared'
@@ -1227,7 +1227,7 @@ def configure_zstd(build_dir, mode):
 args.user_cflags += " " + pkg_config('jsoncpp', '--cflags')
 args.user_cflags += ' -march=' + args.target
 libs = ' '.join([maybe_static(args.staticyamlcpp, '-lyaml-cpp'), '-latomic', '-llz4', '-lz', '-lsnappy', pkg_config('jsoncpp', '--libs'),
-                 ' -lstdc++fs', ' -lcrypt', ' -lcryptopp', ' -lpthread',
+                 ' -lstdc++fs', ' -lcrypt', ' -lcryptopp', ' -lpthread', '-lprofiler',
                  maybe_static(args.staticboost, '-lboost_date_time -lboost_regex -licuuc'), ])
 
 xxhash_dir = 'xxHash'

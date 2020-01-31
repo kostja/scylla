@@ -1,6 +1,0 @@
-scylla:
-    builddir: ./build/dev
-    srcdir: ./tests
-    uri: 127.0.0.1
-vardir: ./var
-
