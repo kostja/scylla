@@ -223,21 +223,6 @@ timeuuid_type_impl::timeuuid_type_impl()
     : concrete_type<utils::UUID>(
               kind::timeuuid, timeuuid_type_name, 16, data::type_info::make_fixed_size(sizeof(uint64_t) * 2)) {}
 
-static int timeuuid_compare_bytes(bytes_view o1, bytes_view o2) {
-    auto compare_pos = [&] (unsigned pos, int mask, int ifequal) {
-        int d = (o1[pos] & mask) - (o2[pos] & mask);
-        return d ? d : ifequal;
-    };
-    return compare_pos(6, 0xf,
-        compare_pos(7, 0xff,
-            compare_pos(4, 0xff,
-                compare_pos(5, 0xff,
-                    compare_pos(0, 0xff,
-                        compare_pos(1, 0xff,
-                            compare_pos(2, 0xff,
-                                compare_pos(3, 0xff, 0))))))));
-}
-
 timestamp_type_impl::timestamp_type_impl() : simple_type_impl(kind::timestamp, timestamp_type_name, 8) {}
 
 static boost::posix_time::ptime get_time(const std::smatch& sm) {
@@ -2027,7 +2012,7 @@ struct compare_visitor {
         if (v2.empty()) {
             return 1;
         }
-        if (auto r = timeuuid_compare_bytes(v1, v2)) {
+        if (auto r = utils::timeuuid_compare_bytes(v1, v2)) {
             return r;
         }
         return lexicographical_tri_compare(
@@ -2059,7 +2044,7 @@ struct compare_visitor {
         }
 
         if (c1 == 1) {
-            if (auto c = timeuuid_compare_bytes(v1, v2)) {
+            if (auto c = utils::timeuuid_compare_bytes(v1, v2)) {
                 return c;
             }
         }

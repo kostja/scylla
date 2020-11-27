@@ -137,6 +137,21 @@ public:
 
 UUID make_random_uuid();
 
+static int timeuuid_compare_bytes(bytes_view o1, bytes_view o2) {
+    auto compare_pos = [&] (unsigned pos, int mask, int ifequal) {
+        int d = (o1[pos] & mask) - (o2[pos] & mask);
+        return d ? d : ifequal;
+    };
+    return compare_pos(6, 0xf,
+        compare_pos(7, 0xff,
+            compare_pos(4, 0xff,
+                compare_pos(5, 0xff,
+                    compare_pos(0, 0xff,
+                        compare_pos(1, 0xff,
+                            compare_pos(2, 0xff,
+                                compare_pos(3, 0xff, 0))))))));
+}
+
 }
 
 template<>

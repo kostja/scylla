@@ -24,6 +24,7 @@
 #include <boost/test/unit_test.hpp>
 #include <utility>
 #include "utils/UUID_gen.hh"
+#include <fmt/format.h>
 
 BOOST_AUTO_TEST_CASE(test_generation_of_name_based_UUID) {
     auto uuid = utils::UUID_gen::get_name_UUID("systembatchlog");
@@ -94,6 +95,26 @@ BOOST_AUTO_TEST_CASE(test_get_time_uuid) {
 
     auto unix_timestamp = utils::UUID_gen::unix_timestamp(uuid);
     BOOST_CHECK(unix_timestamp == millis);
+}
+
+BOOST_AUTO_TEST_CASE(test_timeuuid_is_monotonic) {
+    auto uuid = utils::UUID_gen::get_time_UUID();
+    auto first = uuid.serialize();
+    auto prev = first;
+    int64_t scale_list[] = { 1, 10, 10000, 0 };
+    std::string str[] = { "-100ns", "mc", "ms" };
+
+    for (int64_t *scale = scale_list; *scale; scale++) {
+        for (int64_t i = 1; i < 3697; i++) {
+            auto next =  utils::UUID(uuid.timestamp() + (i * *scale), 0).serialize();
+            bool t1 = utils::timeuuid_compare_bytes(next, prev) > 0;
+            bool t2 = utils::timeuuid_compare_bytes(next, first) > 0;
+            if (!t1) {
+                BOOST_CHECK_MESSAGE(t2, format("a UUID {}{} later is smaller than at test start", i, str[scale - scale_list]));
+            }
+            prev = next;
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_min_time_uuid) {
