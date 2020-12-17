@@ -199,6 +199,8 @@ public:
     std::vector<sstring> _segments_to_replay;
     const uint64_t max_size;
     const uint64_t max_mutation_size;
+    // Segment alignment on disk
+    size_t _alignment = 512;
     // Divide the size-on-disk threshold by #cpus used, since we assume
     // we distribute stuff more or less equally across shards.
     const uint64_t max_disk_size; // per-shard
@@ -504,9 +506,8 @@ public:
     // The commit log (chained) sync marker/header size in bytes (int: length + int: checksum [segmentId, position])
     static constexpr size_t sync_marker_size = 2 * sizeof(uint32_t);
 
-    static constexpr size_t alignment = 4096;
     // TODO : tune initial / default size
-    static constexpr size_t default_size = align_up<size_t>(128 * 1024, alignment);
+    static constexpr size_t default_size = 128 * 1024;
 
     segment(::shared_ptr<segment_manager> m, descriptor&& d, file&& f, uint64_t initial_disk_size)
             : _segment_manager(std::move(m)), _desc(std::move(d)), _file(std::move(f)),
@@ -679,7 +680,7 @@ public:
             overhead += descriptor_header_size;
         }
 
-        auto a = align_up(s + overhead, alignment);
+        auto a = align_up(s + overhead, _segment_manager->_alignment);
         auto k = std::max(a, default_size);
 
         _buffer = _segment_manager->acquire_buffer(k);
@@ -779,7 +780,7 @@ public:
                             }
                             // gah, partial write. should always get here with dma chunk sized
                             // "bytes", but lets make sure...
-                            bytes = align_down(bytes, alignment);
+                            bytes = align_down(bytes, _segment_manager->_alignment);
                             off += bytes;
                             view.remove_prefix(bytes);
                             clogger.trace("Partial write of {} to {}: {}/{} bytes at at {}", bytes, *this, size - view.size_bytes(), size, off - bytes);
@@ -955,7 +956,7 @@ public:
     // a.k.a. zero the tail.
     size_t clear_buffer_slack() {
         auto buf_pos = buffer_position();
-        auto size = align_up(buf_pos, alignment);
+        auto size = align_up(buf_pos, _segment_manager->_alignment);
         auto fill_size = size - buf_pos;
         _buffer_ostream.fill('\0', fill_size);
         _segment_manager->totals.bytes_slack += fill_size;
@@ -1153,6 +1154,7 @@ db::commitlog::segment_manager::list_descriptors(sstring dirname) {
     };
 
     return open_checked_directory(commit_error_handler, dirname).then([this, dirname](file dir) {
+        this->_alignment = dir.direct_io_alignment();
         auto h = make_lw_shared<helper>(std::move(dirname), cfg.fname_prefix, std::move(dir));
         return h->done().then([h]() {
             return make_ready_future<std::vector<db::commitlog::descriptor>>(std::move(h->_result));
@@ -1323,13 +1325,15 @@ future<db::commitlog::segment_manager::sseg_ptr> db::commitlog::segment_manager:
                 } else if (existing_size == max_size) {
                     return make_ready_future<>();
                 }
-                
+
                 totals.total_size_on_disk += (max_size - existing_size);
 
                 clogger.trace("Pre-writing {} of {} KB to segment {}", (max_size - existing_size)/1024, max_size/1024, filename);
                 return f.allocate(existing_size, max_size - existing_size).then([this, existing_size, f]() mutable {
-                    static constexpr size_t buf_size = 4 * segment::alignment;
-                    size_t zerofill_size = max_size - align_down(existing_size, segment::alignment);
+                    // Not to big to avoid reactor stalls on
+                    // allocation or std::fill().
+                    static constexpr size_t buf_size = 16384;
+                    size_t zerofill_size = max_size - align_down(existing_size, _alignment);
                     return do_with(allocate_single_buffer(buf_size), zerofill_size, [this, f](temporary_buffer<char>& buf, uint64_t& rem) mutable {
                         std::fill(buf.get_write(), buf.get_write() + buf.size(), 0);
                         return repeat([this, f, &rem, &buf]() mutable {
@@ -1726,7 +1730,7 @@ uint64_t db::commitlog::segment_manager::get_num_active_segments() const {
 }
 
 temporary_buffer<char> db::commitlog::segment_manager::allocate_single_buffer(size_t s) {
-    return temporary_buffer<char>::aligned(segment::alignment, s);
+    return temporary_buffer<char>::aligned(_alignment, s);
 }
 
 db::commitlog::segment_manager::buffer_type db::commitlog::segment_manager::acquire_buffer(size_t s) {
