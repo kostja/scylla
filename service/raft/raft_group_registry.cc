@@ -88,7 +88,7 @@ class gossiper_state_change_subscriber_proxy: public gms::i_endpoint_state_chang
                 co_await seastar::sleep(3000000us);
                 rslog.info("injected sleep into on_endpoint_change() {} {}", endpoint, id);
             }
-            _address_map.add_or_update_entry(id, endpoint); // ep_state.get_heart_beat_state().get_generation());
+            _address_map.add_or_update_entry(id, endpoint, ep_state.get_heart_beat_state().get_generation());
         }
         co_return;
     }
