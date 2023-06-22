@@ -85,6 +85,9 @@ class HostRegistry:
 
         self.cleanup = cleanup
 
+    def set_subnet(self, subnet: str) -> None:
+        self.subnet = subnet + ".{}"
+
     async def lease_host(self) -> Host:
         return await self.pool.get()
 

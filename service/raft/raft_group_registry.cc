@@ -5,6 +5,7 @@
 /*
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+#include <chrono>
 #include "service/raft/raft_group_registry.hh"
 #include "service/raft/raft_rpc.hh"
 #include "service/raft/raft_address_map.hh"
@@ -18,8 +19,11 @@
 #include <seastar/core/coroutine.hh>
 #include <seastar/core/when_all.hh>
 #include <seastar/core/sleep.hh>
+#include "utils/error_injection.hh"
 
 namespace service {
+
+using namespace std::chrono_literals;
 
 logging::logger rslog("raft_group_registry");
 
@@ -77,11 +81,16 @@ class gossiper_state_change_subscriber_proxy: public gms::i_endpoint_state_chang
     on_endpoint_change(gms::inet_address endpoint, gms::endpoint_state ep_state) {
         auto app_state_ptr = ep_state.get_application_state_ptr(gms::application_state::HOST_ID);
         if (app_state_ptr) {
+            static thread_local int notification_count = 0;
             raft::server_id id(utils::UUID(app_state_ptr->value()));
-            rslog.debug("gossiper_state_change_subscriber_proxy::on_endpoint_change() {} {}", endpoint, id);
-            _address_map.add_or_update_entry(id, endpoint);
+            rslog.info("gossiper_state_change_subscriber_proxy::on_endpoint_change() {} {}", endpoint, id);
+            if ((notification_count++ % 2) && (endpoint == gms::inet_address("127.1.1.3") || endpoint == gms::inet_address("127.1.1.4"))) {
+                co_await seastar::sleep(3000000us);
+                rslog.info("injected sleep into on_endpoint_change() {} {}", endpoint, id);
+            }
+            _address_map.add_or_update_entry(id, endpoint); // ep_state.get_heart_beat_state().get_generation());
         }
-        return make_ready_future<>();
+        co_return;
     }
 
 public:
@@ -111,7 +120,17 @@ public:
 
     virtual future<>
     on_alive(gms::inet_address endpoint, gms::endpoint_state ep_state) override {
-        return on_endpoint_change(endpoint, ep_state);
+        auto app_state_ptr = ep_state.get_application_state_ptr(gms::application_state::HOST_ID);
+        if (app_state_ptr) {
+            raft::server_id id(utils::UUID(app_state_ptr->value()));
+            rslog.info("gossiper_state_change_subscriber_proxy::on_alive() {} {}", endpoint, id);
+            if (std::string{endpoint.to_sstring()}.ends_with(".3")) {
+                rslog.info("Sleeping before handling on_alive from .3");
+                co_await seastar::sleep(std::chrono::seconds{6});
+                rslog.info("Finished Sleeping before handling on_alive from .3");
+            }
+        }
+        co_await on_endpoint_change(endpoint, ep_state);
     }
 
     virtual future<>

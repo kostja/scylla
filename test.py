@@ -100,6 +100,8 @@ class TestSuite(ABC):
         self.pending_test_count = 0
         # The number of failed tests
         self.n_failed = 0
+        if options.static_subnet:
+            self.hosts.set_subnet("127.1.1")
 
         self.run_first_tests = set(cfg.get("run_first", []))
         self.no_parallel_cases = set(cfg.get("no_parallel_cases", []))
@@ -1159,6 +1161,10 @@ def parse_cmd_line() -> argparse.Namespace:
                              "is only supported by python tests for now, other tests ignore it. "
                              "By default, the marker filter is not applied and all tests will be run without exception."
                              "To exclude e.g. slow tests you can write --markers 'not slow'.")
+
+    parser.add_argument('--static-subnet', action='store_true', default=False,
+                        help="Use the same subnet 127.1.1.* for all"
+                        "clusters. Useful for debugging")
 
     scylla_additional_options = parser.add_argument_group('Additional options for Scylla tests')
     scylla_additional_options.add_argument('--x-log2-compaction-groups', action="store", default="0", type=int,
