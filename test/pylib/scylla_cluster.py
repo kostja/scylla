@@ -448,25 +448,6 @@ class ScyllaServer:
 
         report_error('failed to start the node, timeout reached')
 
-    async def force_schema_migration(self) -> None:
-        """This is a hack to change schema hash on an existing cluster node
-        which triggers a gossip round and propagation of entire application
-        state. Helps quickly propagate tokens and speed up node boot if the
-        previous state propagation was missed."""
-        auth = PlainTextAuthProvider(username='cassandra', password='cassandra')
-        profile = ExecutionProfile(load_balancing_policy=WhiteListRoundRobinPolicy(self.seeds),
-                                   request_timeout=self.TOPOLOGY_TIMEOUT)
-        with Cluster(execution_profiles={EXEC_PROFILE_DEFAULT: profile},
-                     contact_points=self.seeds,
-                     auth_provider=auth,
-                     # This is the latest version Scylla supports
-                     protocol_version=4,
-                     ) as cluster:
-            with cluster.connect() as session:
-                session.execute("CREATE KEYSPACE IF NOT EXISTS k WITH REPLICATION = {" +
-                                "'class' : 'NetworkTopologyStrategy', 'replication_factor' : 1 }")
-                session.execute("DROP KEYSPACE k")
-
     async def shutdown_control_connection(self) -> None:
         """Shut down driver connection"""
         if self.control_connection is not None:

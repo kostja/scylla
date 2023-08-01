@@ -5,6 +5,7 @@ cluster:
 extra_scylla_config_options:
     authenticator: AllowAllAuthenticator
     authorizer: AllowAllAuthorizer
+extra_scylla_cmdline_options: ['--default-log-level=debug']
 skip_in_release:
   - test_shutdown_hang
   - test_replace_ignore_nodes

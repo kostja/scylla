@@ -1976,7 +1976,7 @@ future<> storage_service::join_token_ring(cdc::generation_service& cdc_gen_servi
     auto advertise = gms::advertise_myself(!replacing_a_node_with_same_ip);
     co_await _gossiper.start_gossiping(generation_number, app_states, advertise);
 
-    if (!_raft_topology_change_enabled && should_bootstrap()) {
+    if (false && !_raft_topology_change_enabled && should_bootstrap()) {
         // Wait for NORMAL state handlers to finish for existing nodes now, so that connection dropping
         // (happening at the end of `handle_state_normal`: `notify_joined`) doesn't interrupt
         // group 0 joining or repair. (See #12764, #12956, #12972, #13302)
@@ -2046,7 +2046,9 @@ future<> storage_service::join_token_ring(cdc::generation_service& cdc_gen_servi
         _migration_manager.local().passive_announce(std::move(schema_version));
     });
     _listeners.emplace_back(make_lw_shared(std::move(schema_change_announce)));
-    co_await _gossiper.wait_for_gossip_to_settle();
+    if (!raft_server) {
+        co_await _gossiper.wait_for_gossip_to_settle();
+    }
     co_await _feature_service.enable_features_on_join(_gossiper, _sys_ks.local());
 
     set_mode(mode::JOINING);

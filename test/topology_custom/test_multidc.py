@@ -21,11 +21,12 @@ logger = logging.getLogger(__name__)
 async def test_multidc(request: pytest.FixtureRequest, manager: ManagerClient) -> None:
 
     logger.info(f'Creating a new node')
-    s_info = await manager.server_add(config={'snitch': 'GossipingPropertyFileSnitch'},
-     property_file={
-         'dc': 'dc1',
-         'rack': 'myrack'
-     })
+    for i in range (30):
+        s_info = await manager.server_add(config={'snitch': 'GossipingPropertyFileSnitch'},
+         property_file={
+             'dc': 'dc{}'.format(i),
+             'rack': 'myrack'
+         })
     random_tables = RandomTables(request.node.name, manager, unique_name(), 3)
     logger.info(s_info)
     logger.info(f'Creating new tables')
