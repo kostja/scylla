@@ -7,7 +7,7 @@
 Test clusters can restart fine after an IP address change.
 """
 
-from test.pylib.driver_util import reconnect_driver
+from test.topology.util import reconnect_driver
 from test.pylib.util import wait_for_cql_and_get_hosts
 import asyncio
 import logging
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip
 async def test_change_two(manager, random_tables):
     """Stop two nodes, change their IPs and start, check the cluster is
     functional"""

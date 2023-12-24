@@ -1390,8 +1390,8 @@ future<> gossiper::do_gossip_to_unreachable_member(gossip_digest_syn message) {
                     // We are already contacting this endpoint
                     continue;
                 }
-                auto es = get_endpoint_state_for_endpoint_ptr(x);
-                if (es && es->is_alive()) {
+                auto es = get_endpoint_state_ptr(x);
+                if (es && this->is_alive(x)) {
                     // The endpoint is already live
                     continue;
                 }
