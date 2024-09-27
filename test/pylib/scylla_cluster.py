@@ -101,7 +101,7 @@ def make_scylla_conf(mode: str, workdir: pathlib.Path, host_addr: str, seed_addr
                                   'alternator-streams',
                                   'broadcast-tables',
                                   'keyspace-storage-options'],
-
+        'enable_tablets': True,
         'skip_wait_for_gossip_to_settle': 0,
         'ring_delay_ms': 0,
         'num_tokens': 16,
